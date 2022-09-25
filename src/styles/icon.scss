@@ -1,9 +1,10 @@
-i[class^=icon]{
-// 寻找开头的值为icon的对应class属性
-    display: inline-block;
-    background-repeat: no-repeat;
-    background-position: 0 0;
-}
-.icon-aside-home{
-    background-image: url("~@/aside/layoutAssets/home.png");
-}
+// i[class^=icon]{
+// // 寻找开头的值为icon的对应class属性
+//     display: inline-block;
+//     background-repeat: no-repeat;
+//     background-position: 0 0;
+// }
+// .icon-aside-home{
+//     background-image: url("~@/aside/layoutAssets/home.png");
+//     // 类名，对应我们要使用的图标
+// }

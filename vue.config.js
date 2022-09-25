@@ -1,5 +1,8 @@
 const { defineConfig } = require("@vue/cli-service");
 module.exports = defineConfig({
+  publicPath:process.env.NODE_ENV==='production'?'':'./',
+  outputDir:process.env.NODE_ENV==='production'?'dist':'devDist',
+  //构建项目生成的目录
   transpileDependencies: true,
   css: {
     loaderOptions: {
@@ -20,5 +23,20 @@ module.exports = defineConfig({
       },
     },
   },
-  lintOnSave: false,
-});
+  devServer: {
+    // open:true,//运行项目后自动打开
+    host:"0.0.0.0",//在局域网内可以让外部访问
+    port:8080,//运行的自定义接口
+    proxy: {
+      [process.env.VUE_APP_FLAG]: {
+        target: process.env.VUE_APP_APIURL ,
+        ws: true,//是否开启webstock（？
+        changeOrigin: true,//是否开启跨域
+        pathRewrite:{
+          [`^${process.env.VUE_APP_FLAG}`]:''//  查找开头为 /api的字符替换为空字符串
+        }  //  /api/getCode => /getCode => http://old.web-jshtml.cn/vue3/api/getCode
+      },
+      },
+    },
+    lintOnSave: false,
+  });

@@ -11,23 +11,23 @@
       >
         <a-form-item name="username">
           <label>用户名</label>
-          <a-input v-model:value="account_form.username" type="text" autocomplete="off" />
+          <a-input v-model:value="account_form.username" :disabled="input_disabled.username" type="text" autocomplete="off" />
         </a-form-item>
 
         <a-form-item name="password">
           <label>密码</label>
-          <a-input v-model:value="account_form.password" type="password" autocomplete="off" />
+          <a-input-password v-model:value="account_form.password" type="password" autocomplete="off" placeholder="请输入密码" />
         </a-form-item>
 
         <a-form-item name="passwords">
           <label>确认密码</label>
-          <a-input v-model:value="account_form.passwords" type="password" autocomplete="off" />
+          <a-input-password v-model:value="account_form.passwords" type="password" autocomplete="off" placeholder="请再次输入密码" />
         </a-form-item>
 
         <a-form-item name="code">
           <label>验证码</label>
           <a-row :gutter="16">
-            <a-col :span="14"> <a-input maxlength=6 v-model:value="account_form.code" type="text" autocomplete="off" /></a-col>
+            <a-col :span="14"> <a-input v-model:value="account_form.code" type="text" autocomplete="off" /></a-col>
             <a-col :span="10">
               <a-button type="primary" @click="getCode" 
               block :disabled="button_disabled" :loading="button_loading">
@@ -36,9 +36,6 @@
           </a-row>
         </a-form-item>
 
-        <a-form-item>
-          <Captcha/>
-        </a-form-item>
         <a-form-item>
           <a-button type="primary" html-type="submit" block>注册</a-button>
         </a-form-item>
@@ -52,25 +49,33 @@
 </template>
 
 <script>
-import {checkPassword as pass} from "@/utils/validate.js"
+import {checkPassword as pass,checkPhoneNumber as phone} from "@/utils/validate.js"
+import {useRouter,useRoute} from 'vue-router';
 import {reactive,onMounted,toRefs} from "vue";
-import Captcha from "@/components/Captcha";
+//加密
+import md5 from 'js-md5';
+import {getAES} from "@/utils/crypto.js";
+import {CheckUserName,Send,AccountRegister} from "@/api/accountApi";
 import { message } from 'ant-design-vue';
 export default {
   name: "Login",
-  components:{
-    Captcha
-  },
   setup(props){
     const checkUserName = async (_rule, value) => {
       if (value === '') {
         return Promise.reject('请输入用户名'); //Promise.reject提示出错
       } else {
-        return Promise.resolve();//Promise.resolve相当于说明成功
+        if(!phone(value))
+        {
+          dataItem.button_disabled=true;
+          return Promise.reject('用户名应是11位电话号码');
+        }
+        else{
+          checkUserNameFn();
+          return Promise.resolve();//Promise.resolve相当于说明成功
+        }
       }
     };
     const checkPassword = async (_rule, value) => {
-      console.log(value);
       if (value === '') {
         return Promise.reject('请输入密码'); 
       } else {
@@ -110,6 +115,9 @@ export default {
         passwords:"",
         code:""
       },
+      input_disabled:{
+        username:false,
+      },
       rules_form:{
         username: [{
           required: true,
@@ -136,22 +144,61 @@ export default {
     const dataItem=reactive({
       button_text:"获取验证码",
       button_loading:false,
-      button_disabled:false,
-      sec:60,
+      button_disabled:true,
+      sec:0,
       timer:null
     })
     const form=toRefs(formConfig);
     const data=toRefs(dataItem);
     //提交表单
-    const handleFinish=() =>{
+    const handleFinish=(value) =>{
+      const requestData={
+        username:formConfig.account_form.username,
+        password:md5(formConfig.account_form.password),
+        code:formConfig.account_form.code};
+      AccountRegister(requestData).then(response=>{
+        const code=response.content.code;
+        if(!code) {
+          message.error(response.message);
+          return false;
+        }else{
+          message.success("注册成功！");
 
+        }
+      })
     }
-    const getCode=() =>{
-      if(!formConfig.account_form.username){
-         message.info('用户名不能为空！');
-         return false;
-      }
-      if(dataItem.timer){
+    const getCode=async() =>{
+      const usernameStatus=await checkUserNameFn();
+      if(usernameStatus)
+      {return false;}
+      dataItem.button_loading=true;
+      dataItem.button_text="加载中";
+      Send({username:formConfig.account_form.username,type:"Register"}).then(response=>{
+        dataItem.button_loading=false;
+        dataItem.button_disabled=true;
+        countDown();
+      }).catch(error=>{
+        dataItem.button_text="重新获取";
+        dataItem.button_disabled=false;
+      });
+    }
+    const checkUserNameFn=()=>{
+      formConfig.input_disabled.username=true;
+      return CheckUserName({username:formConfig.account_form.username}).then(response=>{
+        //获取用户名状态（是否已经被注册
+        const userStatus=response.content.user;
+        //从而确定发送验证码按钮状态
+        dataItem.button_disabled=userStatus; 
+        formConfig.input_disabled.username=false;
+        return userStatus;
+        }).catch(error=>{
+          formConfig.input_disabled.username=false;});
+    }
+    const countDown=()=>{
+      //更新倒计时时间
+      dataItem.sec=process.env.VUE_APP_COUNTDOWN;
+      //定时器
+       if(dataItem.timer){
         clearInterval(dataItem.timer);
       }
       dataItem.timer=setInterval(() => {
@@ -160,6 +207,7 @@ export default {
         if(s<=0){
           clearInterval(dataItem.timer);
           dataItem.button_text="重新获取";
+          dataItem.button_disabled=false;
         }
       }, 1000);
     }

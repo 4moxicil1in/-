@@ -100,6 +100,7 @@ export default {
       }else {
         return Promise.resolve();}
     };
+    //form表单
     const formConfig=reactive({
       layout:{
         labelCol: { span: 4 },
@@ -133,6 +134,7 @@ export default {
         }]
       },
     })
+    //data数据
     const dataItem=reactive({
       button_text:"获取验证码",
       button_loading:false,
@@ -162,6 +164,10 @@ export default {
           dataItem.button_text="重新获取";
         }
       }, 1000);
+    }
+
+    const checkUsernameFunction =()=>{
+      checkUserName({username:formConfig.account_form.username})
     }
 
     return {
