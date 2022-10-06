@@ -4,6 +4,8 @@ import router from "./router";
 import store from "./store";
 import Atnd from "ant-design-vue";
 import "ant-design-vue/dist/antd.css";
+//路由拦截
+import "./router/permit";
 import Axios from "axios";
 
 const app=createApp(App);
